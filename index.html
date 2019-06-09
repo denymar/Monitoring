@@ -21,7 +21,12 @@
 
   <div class="modal modal-login">
     <div class="modal-content">
-      <h3>Login</h3>
+      <div class="modal-content-top">
+        <h3>Login</h3>
+        <div class="close-modal">
+          &times;
+        </div>
+      </div>
       <form action="./api/api.php" method="post">
         <div class="input-block">
           <input type="text" name="username" value="" placeholder="username">
@@ -107,16 +112,19 @@
         <div class="input-block">
           <input type="password" name="password" value="" placeholder="password">
         </div>
-        <div class="input-block">
-          <button type="button" name="submit-login">Login</button>
-        </div>
+        <button class="btn btn-primary" type="button" name="submit-login">Confirm</button>
       </form>
     </div>
   </div>
 
   <div class="modal modal-signup">
     <div class="modal-content">
-      <h3>Sign Up</h3>
+      <div class="modal-content-top">
+        <h3>Sign Up</h3>
+        <div class="close-modal">
+          &times;
+        </div>
+      </div>
       <form action="./api/api.php" method="post">
         <div class="input-block">
           <input type="text" name="username" value="" placeholder="username">
@@ -127,9 +135,7 @@
         <div class="input-block">
           <input type="password" name="password" value="" placeholder="repeat password">
         </div>
-        <div class="input-block">
-          <button type="button" name="submit-login">Login</button>
-        </div>
+        <button class="btn btn-primary" type="button" name="submit-signup">Confirm</button>
       </form>
     </div>
   </div>

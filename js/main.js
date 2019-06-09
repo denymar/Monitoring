@@ -12,26 +12,28 @@ mainMenuToggle.onclick = () => {
 
 const loginModal = document.querySelector(".modal-login");
 const loginBtn = document.querySelector(`.auth-block button[name="login-btn"]`);
+const loginCloseBtn = document.querySelector(".modal-login .close-modal");
 
 loginBtn.onclick = () => {
   loginModal.classList.add("modal-show");
 }
 
 loginModal.onclick = (e) => {
-  if (e.target === loginModal) {
+  if (e.target === loginModal || e.target === loginCloseBtn) {
     loginModal.classList.remove("modal-show");
   }
 }
 
 const signupModal = document.querySelector(".modal-signup");
 const singupBtn = document.querySelector(`.auth-block button[name="signup-btn"]`);
+const signupCloseBtn = document.querySelector(".modal-signup .close-modal");
 
 singupBtn.onclick = () => {
   signupModal.classList.add("modal-show");
 }
 
 signupModal.onclick = (e) => {
-  if (e.target === signupModal) {
+  if (e.target === signupModal || e.target === signupCloseBtn) {
     signupModal.classList.remove("modal-show");
   }
 }
