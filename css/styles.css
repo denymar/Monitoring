@@ -375,3 +375,19 @@ header {
   font-size: 30px;
   cursor: pointer;
 }
+
+.new-element {
+  margin: 5px;
+  padding: 10px;
+  border: 1px dotted #86c232;
+}
+
+.new-element .input-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.new-element .input-block .btn {
+  margin: 5px 10px
+}
