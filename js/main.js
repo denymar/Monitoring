@@ -1,3 +1,5 @@
+const apiPATH = "../api/api.php";
+
 const logo = document.querySelector(".logo");
 logo.onclick = () => {
   location.reload(true);
@@ -8,6 +10,7 @@ const mainMenuToggle = document.querySelector(".main-menu-toggle");
 
 mainMenuToggle.onclick = () => {
   mainMenu.classList.toggle("slide-left");
+  mainMenuToggle.classList.toggle("slide-left");
 }
 
 const loginModal = document.querySelector(".modal-login");
