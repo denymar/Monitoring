@@ -376,6 +376,19 @@ header {
   cursor: pointer;
 }
 
+.modal .modal-content form {
+  position: relative;
+}
+
+.modal .modal-content form .error-msg {
+  position: absolute;
+  bottom: 55px;
+  left: 0;
+  width: 100%;
+  color: #ff5e5e;
+  font-size: 14px;
+}
+
 .new-element {
   margin: 5px;
   padding: 10px;

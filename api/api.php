@@ -1,18 +1,9 @@
 <?php
 require_once "./idiorm.php";
 
-header("Access-Control-Allow-Origin: *");
-header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
-header('Access-Control-Max-Age: 1000');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-TOKEN');
-
-if (isset($_REQUEST['access_token']) && !empty($_REQUEST['access_token'])) {
-  session_id($_REQUEST['access_token']);
-}
-
 session_start();
 
-ORM::configure('mysql:host=localhost:3308;dbname=enote');
+ORM::configure('mysql:host=localhost:3308;dbname=monitoring');
 ORM::configure('username', 'root');
 ORM::configure('password', '');
 
@@ -22,10 +13,8 @@ ORM::configure('password', '');
 //       'id INT PRIMARY KEY AUTO_INCREMENT,' .
 //       'username VARCHAR(50) NOT NULL,' .
 //       'password VARCHAR(50),' .
-//       'email VARCHAR(50),' .
 //       'UNIQUE KEY id (id),' .
-//       'UNIQUE KEY username (username),' .
-//       'UNIQUE KEY email (email))'
+//       'UNIQUE KEY username (username))'
 // );
 // create_user("admin", "pass", "mail@dot.com");
 // create_user("admin3", "pass", "mail3@dot.com");
@@ -63,7 +52,7 @@ ORM::configure('password', '');
 //       'UNIQUE KEY id (id))'
 // );
 
-function create_user($username, $password, $email) {
+function create_user($username, $password) {
   $response = array(
     'status' => 'success',
     'message' => ''
@@ -71,19 +60,13 @@ function create_user($username, $password, $email) {
 
   if (username_exists($username)) {
     $response['status'] = 'error';
-    $response['message'] .= 'This username already exists. ';
-  }
-
-  if (email_exists($email)) {
-    $response['status'] = 'error';
-    $response['message'] .= 'This email already exists. ';
+    $response['message'] = 'This username already exists.';
   }
 
   if ($response['status'] == 'success') {
     $u = ORM::for_table('users')->create();
     $u->username = $username;
     $u->password = $password;
-    $u->email = $email;
     $u->save();
     $response['message'] = 'User has been added.';
   }
@@ -153,15 +136,6 @@ function username_exists($username) {
   }
 }
 
-function email_exists($email) {
-  $u = ORM::for_table('users')->where('email', $email)->find_one();
-  if ($u != null) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 function login_user($username, $password) {
   $response = array(
     'status' => 'success',
@@ -176,7 +150,6 @@ function login_user($username, $password) {
 
   if ($u != null) {
     $response['message'] = $username;
-    $response['access_token'] = session_id();
   } else {
     $response['status'] = 'error';
     $response['message'] = 'Invalid username or password.';
@@ -199,9 +172,8 @@ if (isset($_POST['submit-login'])) {
 if (isset($_POST['submit-signup'])) {
   // sleep(2);
   $u = $_POST['username'];
-  $e = $_POST['email'];
   $p = $_POST['password'];
-  echo json_encode(create_user($u, $p, $e));
+  echo json_encode(create_user($u, $p));
 }
 
 if (isset($_POST['check-session'])) {
