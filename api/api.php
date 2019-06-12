@@ -20,6 +20,17 @@ ORM::configure('password', '');
 // create_user("admin3", "pass", "mail3@dot.com");
 // create_user("admin2", "pass", "mail2@dot.com");
 
+// ORM::get_db()->exec("DROP TABLE IF EXISTS buildings;");
+// ORM::get_db()->exec(
+//   'CREATE TABLE buildings (' .
+//       'id INT PRIMARY KEY AUTO_INCREMENT,' .
+//       'username_fk VARCHAR(50) NOT NULL,' .
+//       'building VARCHAR(200),' .
+//       'imageURL VARCHAR(200),' .
+//       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
+//       'UNIQUE KEY id (id))'
+// );
+
 // ORM::get_db()->exec("DROP TABLE IF EXISTS events;");
 // ORM::get_db()->exec(
 //   'CREATE TABLE events (' .
@@ -70,6 +81,23 @@ function create_user($username, $password) {
     $u->save();
     $response['message'] = 'User has been added.';
   }
+
+  return $response;
+}
+
+function create_building($username, $building, $imageURL) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $b = ORM::for_table('buildings')->create();
+  $b->username_fk = $username;
+  $b->building = $building;
+  $b->imageURL = $imageURL;
+  $b->save();
+
+  $response['message'] = 'Building has been saved to DB.';
 
   return $response;
 }
@@ -127,6 +155,21 @@ function create_log($username, $year, $month, $day) {
   return $response;
 }
 
+function building_exists($username, $building) {
+  $b = ORM::for_table('buildings')
+  ->where(array(
+    'username_fk' => $username,
+    'building' => $building
+  ))
+  ->find_one();
+
+  if ($b != null) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 function username_exists($username) {
   $u = ORM::for_table('users')->where('username', $username)->find_one();
   if ($u != null) {
@@ -157,6 +200,90 @@ function login_user($username, $password) {
 
   return $response;
 }
+
+if (isset($_POST['add-building'])) {
+  if (isset($_POST['name']) && isset($_SESSION['username'])) {
+    if (isset($_FILES['image-building'])) {
+      $response = array(
+        'status' => 'success',
+        'message' => ''
+      );
+
+      $user = $_SESSION['username'];
+      $name = $_POST['name'];
+      $tmpName = $_FILES['image-building']['tmp_name'];
+      $parts = explode('.', $_FILES['image-building']['name']);
+      $ext = $parts[count($parts) - 1];
+      $newName = $name . '.' . $ext;
+      $dest = "uploads/{$user}/{$name}/$newName";
+
+      if (!file_exists("uploads/{$user}/")) {
+        mkdir("uploads/{$user}", 0777, true);
+      }
+
+      if (!file_exists("uploads/{$user}/{$name}/")) {
+        mkdir("uploads/{$user}/{$name}/", 0777, true);
+      }
+
+      if (building_exists($user, $name)) {
+        $response['status'] = 'error';
+        $response['message'] = 'This building exists.';
+      } else {
+        create_building($user, $name, $dest);
+        $response['message'] = 'Building was added.';
+        move_uploaded_file($tmpName, $dest);
+
+        $b = ORM::for_table('buildings')
+        ->where(array(
+          'username_fk' => $user,
+          'building' => $name
+        ))
+        ->find_one()
+        ->as_array();
+
+        if ($b != null) {
+          $response['building'] = $b;
+          $response['message'] = "Building was found.";
+        } else {
+          $response['status'] = "error";
+          $response['message'] = "Building was NOT found.";
+        }
+      }
+
+      echo json_encode($response);
+    }
+  }
+}
+
+// if (isset($_POST["get-building"])) {
+//   if (isset($_SESSION["username"])) {
+//     $response = array(
+//       'status' => 'success',
+//       'message' => ''
+//     );
+//
+//     $name = $_POST["name"];
+//     $user = $_SESSION["username"];
+//
+//     $b = ORM::for_table('buildings')
+//     ->where(array(
+//       'username_fk' => $user,
+//       'building' => $name
+//     ))
+//     ->find_one()
+//     ->as_array();
+//
+//     if ($b != null) {
+//       $response['building'] = $b;
+//       $response['message'] = "Building was found.";
+//     } else {
+//       $response['status'] = "error";
+//       $response['message'] = "Building was NOT found.";
+//     }
+//
+//     echo json_encode($response);
+//   }
+// }
 
 if (isset($_POST['submit-login'])) {
   // sleep(2);
