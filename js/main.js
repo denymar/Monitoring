@@ -1,5 +1,13 @@
 const apiPATH = "./api/api.php";
 
+const mainMenu = document.querySelector(".main-menu");
+const mainMenuToggle = document.querySelector(".main-menu-toggle");
+
+mainMenuToggle.onclick = () => {
+  mainMenu.classList.toggle("slide-left");
+  mainMenuToggle.classList.toggle("slide-left");
+}
+
 function checkSession() {
   $.post(apiPATH, {
     "check-session": true
@@ -10,6 +18,8 @@ function checkSession() {
       authBlock.style.display = "none";
       userBlock.style.display = "block";
       username.innerHTML = parsed['message'];
+      clearMenu(mainMenu);
+      renderBuildingsList(mainMenu);
     }
   });
 }
@@ -19,14 +29,6 @@ checkSession();
 const logo = document.querySelector(".logo");
 logo.onclick = () => {
   location.reload(true);
-}
-
-const mainMenu = document.querySelector(".main-menu");
-const mainMenuToggle = document.querySelector(".main-menu-toggle");
-
-mainMenuToggle.onclick = () => {
-  mainMenu.classList.toggle("slide-left");
-  mainMenuToggle.classList.toggle("slide-left");
 }
 
 const loginModal = document.querySelector(".modal-login");
@@ -58,8 +60,7 @@ loginSubmit.onclick = (e) => {
       username.innerHTML = parsed['message'];
 
       clearMenu(mainMenu);
-      const resp = fetchBuildings();
-      renderBuildingsList(mainMenu, resp);
+      renderBuildingsList(mainMenu);
     } else {
       loginError.innerHTML = parsed['message'];
     }
@@ -140,11 +141,31 @@ function fetchBuildings() {
   return false;
 }
 
-function renderBuildingsList(node, list) {
+function renderBuildingsList(node) {
   const ul = document.createElement("ul");
-  if (list) {
 
-  }
+  $.post(apiPATH, {
+    "get-buildings": true
+  }, function(data, status) {
+    console.log(data);
+    const parsed = JSON.parse(data);
+    parsed['buildings'].forEach(b => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+      <div class="main-menu-elem">
+        <div class="building">
+          <div class="building-image">
+            <img src="./api/${b['imageURL']}" alt="building">
+          </div>
+          <span class="building-name">${b['building']}</span>
+        </div>
+        <button class="btn btn-primary" type="button" name="delete-building">Delete</button>
+      </div>
+      `;
+
+      ul.insertBefore(li, building_add);
+    });
+  })
 
   const building_add = document.createElement("li");
   building_add.innerHTML = `

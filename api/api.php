@@ -255,35 +255,30 @@ if (isset($_POST['add-building'])) {
   }
 }
 
-// if (isset($_POST["get-building"])) {
-//   if (isset($_SESSION["username"])) {
-//     $response = array(
-//       'status' => 'success',
-//       'message' => ''
-//     );
-//
-//     $name = $_POST["name"];
-//     $user = $_SESSION["username"];
-//
-//     $b = ORM::for_table('buildings')
-//     ->where(array(
-//       'username_fk' => $user,
-//       'building' => $name
-//     ))
-//     ->find_one()
-//     ->as_array();
-//
-//     if ($b != null) {
-//       $response['building'] = $b;
-//       $response['message'] = "Building was found.";
-//     } else {
-//       $response['status'] = "error";
-//       $response['message'] = "Building was NOT found.";
-//     }
-//
-//     echo json_encode($response);
-//   }
-// }
+if (isset($_POST["get-buildings"])) {
+  if (isset($_SESSION["username"])) {
+    $response = array(
+      'status' => 'success',
+      'message' => ''
+    );
+
+    $user = $_SESSION["username"];
+
+    $b = ORM::for_table('buildings')
+    ->where('username_fk', $user)
+    ->find_array();
+
+    if ($b != null) {
+      $response['buildings'] = $b;
+      $response['message'] = "Buildings were found.";
+    } else {
+      $response['status'] = "error";
+      $response['message'] = "Buildings were NOT found.";
+    }
+
+    echo json_encode($response);
+  }
+}
 
 if (isset($_POST['submit-login'])) {
   // sleep(2);
