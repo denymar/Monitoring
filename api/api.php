@@ -31,6 +31,18 @@ ORM::configure('password', '');
 //       'UNIQUE KEY id (id))'
 // );
 
+// ORM::get_db()->exec("DROP TABLE IF EXISTS floors;");
+// ORM::get_db()->exec(
+//   'CREATE TABLE floors (' .
+//       'id INT PRIMARY KEY AUTO_INCREMENT,' .
+//       'username_fk VARCHAR(50) NOT NULL,' .
+//       'building_fk VARCHAR(200),' .
+//       'floor VARCHAR(200),' .
+//       'imageURL VARCHAR(200),' .
+//       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
+//       'UNIQUE KEY id (id))'
+// );
+
 // ORM::get_db()->exec("DROP TABLE IF EXISTS events;");
 // ORM::get_db()->exec(
 //   'CREATE TABLE events (' .
@@ -102,6 +114,24 @@ function create_building($username, $building, $imageURL) {
   return $response;
 }
 
+function create_floor($username, $building, $floor, $imageURL) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $f = ORM::for_table('floors')->create();
+  $f->username_fk = $username;
+  $f->building_fk = $building;
+  $f->floor = $floor;
+  $f->imageURL = $imageURL;
+  $f->save();
+
+  $response['message'] = 'Building has been saved to DB.';
+
+  return $response;
+}
+
 function create_event($username, $event, $ePlace, $eYear, $eMonth, $eDate, $eHour, $eMinute) {
   $response = array(
     'status' => 'success',
@@ -155,6 +185,22 @@ function create_log($username, $year, $month, $day) {
   return $response;
 }
 
+function floor_exists($username, $building, $floor) {
+  $f = ORM::for_table('floors')
+  ->where(array(
+    'username_fk' => $username,
+    'building_fk' => $building,
+    'floor' => $floor
+  ))
+  ->find_one();
+
+  if ($f != null) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 function building_exists($username, $building) {
   $b = ORM::for_table('buildings')
   ->where(array(
@@ -199,6 +245,66 @@ function login_user($username, $password) {
   }
 
   return $response;
+}
+
+if (isset($_POST['add-floor'])) {
+  if (isset($_POST['building-name']) && isset($_POST['floor-name']) && isset($_SESSION['username'])) {
+    if (isset($_FILES['image-floor'])) {
+      $response = array(
+        'status' => 'success',
+        'message' => ''
+      );
+
+      $user = $_SESSION['username'];
+      $building_name = $_POST['building-name'];
+      $floor_name = $_POST['floor-name'];
+      $tmpName = $_FILES['image-floor']['tmp_name'];
+      $parts = explode('.', $_FILES['image-floor']['name']);
+      $ext = $parts[count($parts) - 1];
+      $newName = $floor_name . '.' . $ext;
+      $dest = "uploads/{$user}/{$building_name}/{$floor_name}/$newName";
+
+      if (!file_exists("uploads/{$user}/")) {
+        mkdir("uploads/{$user}", 0777, true);
+      }
+
+      if (!file_exists("uploads/{$user}/{$building_name}/")) {
+        mkdir("uploads/{$user}/{$building_name}/", 0777, true);
+      }
+
+      if (!file_exists("uploads/{$user}/{$building_name}/{$floor_name}/")) {
+        mkdir("uploads/{$user}/{$building_name}/{$floor_name}/", 0777, true);
+      }
+
+      if (floor_exists($user, $building_name, $floor_name)) {
+        $response['status'] = 'error';
+        $response['message'] = 'This floor exists in this building.';
+      } else {
+        create_floor($user, $building_name, $floor_name, $dest);
+        $response['message'] = 'Floor was added.';
+        move_uploaded_file($tmpName, $dest);
+
+        $f = ORM::for_table('floors')
+        ->where(array(
+          'username_fk' => $user,
+          'building_fk' => $building_name,
+          'floor' => $floor_name
+        ))
+        ->find_one()
+        ->as_array();
+
+        if ($f != null) {
+          $response['floor'] = $f;
+          $response['message'] = "Floor was found.";
+        } else {
+          $response['status'] = "error";
+          $response['message'] = "Floor was NOT found.";
+        }
+      }
+
+      echo json_encode($response);
+    }
+  }
 }
 
 if (isset($_POST['add-building'])) {
@@ -252,6 +358,34 @@ if (isset($_POST['add-building'])) {
 
       echo json_encode($response);
     }
+  }
+}
+
+if (isset($_POST["get-floors"]) && isset($_POST["building-name"])) {
+  if (isset($_SESSION["username"])) {
+    $response = array(
+      'status' => 'success',
+      'message' => ''
+    );
+
+    $user = $_SESSION["username"];
+    $building = $_POST["building-name"];
+    $f = ORM::for_table('floors')
+    ->where(array(
+      'username_fk' => $user,
+      'building_fk' => $building
+    ))
+    ->find_array();
+
+    if ($f != null) {
+      $response['floors'] = $f;
+      $response['message'] = "Floors were found.";
+    } else {
+      $response['status'] = "error";
+      $response['message'] = "Floors were NOT found.";
+    }
+
+    echo json_encode($response);
   }
 }
 
