@@ -1,7 +1,9 @@
 const apiPATH = "./api/api.php";
 
+const mainContainer = document.querySelector("main .container");
 const mainMenu = document.querySelector(".main-menu");
 const mainMenuToggle = document.querySelector(".main-menu-toggle");
+
 
 mainMenuToggle.onclick = () => {
   mainMenu.classList.toggle("slide-left");
@@ -81,6 +83,7 @@ logoutBtn.onclick = () => {
       authBlock.style.display = "block";
       username.innerHTML = '';
       clearMenu(mainMenu);
+      initMenu(mainMenu);
     }
   });
 }
@@ -131,6 +134,21 @@ singupBtn.onclick = () => {
   signupModal.classList.add("modal-show");
 }
 
+const burgerBtn = document.querySelector(".burger-btn");
+const closeAuthBlockBtns = document.querySelectorAll(".close-auth-block");
+
+burgerBtn.onclick = () => {
+  authBlock.classList.add("slide-out");
+  userBlock.classList.add("slide-out");
+}
+
+closeAuthBlockBtns.forEach(btn => {
+  btn.onclick = () => {
+    authBlock.classList.remove("slide-out");
+    userBlock.classList.remove("slide-out");
+  }
+});
+
 signupModal.onclick = (e) => {
   if (e.target === signupModal || e.target === signupCloseBtn) {
     signupModal.classList.remove("modal-show");
@@ -139,6 +157,16 @@ signupModal.onclick = (e) => {
 
 function clearMenu(node) {
   node.innerHTML = '';
+}
+
+function initMenu(node) {
+  node.innerHTML = `
+  <div class="empty-menu">
+    <span>
+      Log in to use this menu
+    </span>
+  </div>
+  `;
 }
 
 function fetchBuildings() {
@@ -351,7 +379,7 @@ function renderFloorsList(node, buildingName) {
 
         const floor = li.querySelector(".main-menu-elem");
         floor.onclick = () => {
-          // TODO
+
         }
 
         ul.insertBefore(li, addFloorElem);
@@ -446,6 +474,7 @@ function renderFloorsList(node, buildingName) {
 
             floor.onclick = () => {
 
+              // loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
             }
 
             const delFloor = addedFloor.querySelector(`button[name="delete-floor"]`);
@@ -455,6 +484,7 @@ function renderFloorsList(node, buildingName) {
 
             addFloorBtn.style.display = "block";
             ul.insertBefore(addedFloor, addFloorElem);
+            renderFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
           } else {
             alert(parsed['message']);
           }
@@ -475,6 +505,167 @@ function renderFloorsList(node, buildingName) {
   node.appendChild(ul);
 }
 
-function renderAuthList(node) {
+function renderFloor(node, building, floor, floorIMG) {
+  node.innerHTML = "";
+  const floorHolder = document.createElement("div");
+  floorHolder.classList.add("floor-holder");
+  floorHolder.innerHTML = `
+  <div class="floor-image">
+    <img src="./api/${floorIMG}" alt="floor">
+  </div>
+  <div class="floor-controls">
+    <button class="btn btn-primary" type="button" name="add-sensor">Add sensor</button>
+  </div>
+  `;
 
+  const floorImgContainer = floorHolder.querySelector(".floor-image");
+  const floorControls = floorHolder.querySelector(".floor-controls");
+  const addSensorBtn = floorHolder.querySelector(`button[name="add-sensor"]`);
+  addSensorBtn.onclick = () => {
+    const sensor = document.createElement("div");
+    sensor.classList.add("sensor", "sensor-active");
+    let top = 0;
+    let left = 0;
+    sensor.style.top = `${top}%`;
+    sensor.style.left = `${left}%`;
+    floorImgContainer.appendChild(sensor);
+
+    addSensorBtn.style.display = "none";
+
+    const sensorAdder = document.createElement("div");
+    sensorAdder.classList.add("sensor-adder");
+    sensorAdder.innerHTML = `
+    <div class="sensor-mover">
+      <div class="mover-line">
+        <div class="move-btn move-up"></div>
+      </div>
+      <div class="mover-line">
+        <div class="move-btn move-left"></div>
+        <div class="circle"></div>
+        <div class="move-btn move-right"></div>
+      </div>
+      <div class="mover-line">
+        <div class="move-btn move-down"></div>
+      </div>
+      <div class="sensor-mover-step">
+        Move step: <input type="number" name="step-percents" value="1" placeholder="%"> %
+      </div>
+    </div>
+    <div class="input-block">
+      <input type="text" name="new-sensor-name" value="" placeholder="Name">
+    </div>
+    <div class="input-block">
+      <input type="text" name="new-sensor-serial" value="" placeholder="Serial number">
+    </div>
+    <div class="input-block with-rb-group">
+      <div class="rb-group">
+        <input id="type-temperature" type="radio" name="new-sensor-type" value="" checked>
+        <label for="type-temperature">Temperature</label>
+      </div>
+      <div class="rb-group">
+        <input id="type-pressure" type="radio" name="new-sensor-type" value="">
+        <label for="type-pressure">Pressure</label>
+      </div>
+      <div class="rb-group">
+        <input id="type-humidity" type="radio" name="new-sensor-type" value="">
+        <label for="type-humidity">Humidity</label>
+      </div>
+    </div>
+    <div class="input-block">
+      <button class="btn btn-primary" type="submit" name="add-sensor-submit">Add</button>
+      <button class="btn btn-primary" type="button" name="cancel">Cancel</button>
+    </div>
+    `;
+
+    const step = sensorAdder.querySelector(`input[name="step-percents"]`);
+    const moveUpBtn = sensorAdder.querySelector(".move-up");
+    const moveLeftBtn = sensorAdder.querySelector(".move-left");
+    const moveRightBtn = sensorAdder.querySelector(".move-right");
+    const moveDownBtn = sensorAdder.querySelector(".move-down");
+    const sensorName = sensorAdder.querySelector(`input[name="new-sensor-name"]`);
+    const sensorSN = sensorAdder.querySelector(`input[name="new-sensor-serial"]`);
+    const temperatureRb = sensorAdder.querySelector("#type-temperature");
+    const pressureRb = sensorAdder.querySelector("#type-pressure");
+    const humidityRb = sensorAdder.querySelector("#type-humidity");
+    let type;
+
+    if (temperatureRb.checked) {
+      type = "temperature";
+    }
+
+    if (pressureRb.checked) {
+      type = "pressure";
+    }
+
+    if (humidityRb.checked) {
+      type = "humidity";
+    }
+
+    moveUpBtn.onclick = () => {
+      if (step.value === "") {
+        top--;
+      } else {
+        top -= Number(step.value);
+      }
+      sensor.style.top = `${top}%`;
+    }
+
+    moveLeftBtn.onclick = () => {
+      if (step.value === "") {
+        left--;
+      } else {
+        left -= Number(step.value);
+      }
+      sensor.style.left = `${left}%`;
+    }
+
+    moveRightBtn.onclick = () => {
+      if (step.value === "") {
+        left++;
+      } else {
+        left += Number(step.value);
+      }
+      sensor.style.left = `${left}%`;
+    }
+
+    moveDownBtn.onclick = () => {
+      if (step.value === "") {
+        top++;
+      } else {
+        top += Number(step.value);
+      }
+      sensor.style.top = `${top}%`;
+    }
+
+    const submitAdd = sensorAdder.querySelector(`button[name="add-sensor-submit"]`);
+    const cancelAdd = sensorAdder.querySelector(`button[name="cancel"]`);
+
+    submitAdd.onclick = () => {
+      if (sensorName.value !== "" && sensorSN.value !== "") {
+        $.post(apiPATH, {
+          "add-sensor": true,
+          "building-name": building,
+          "floor-name": floor,
+          "sensor-name": sensorName.value,
+          "sensor-sn": sensorSN.value,
+          "type": type,
+          "top": top,
+          "left": left
+        }, function(data, status) {
+          console.log(data);
+        });
+      }
+    }
+
+    cancelAdd.onclick = () => {
+      floorImgContainer.removeChild(sensor);
+      floorControls.removeChild(sensorAdder);
+      addSensorBtn.style.display = "inline";
+    }
+
+
+    floorControls.appendChild(sensorAdder);
+  }
+
+  node.appendChild(floorHolder);
 }

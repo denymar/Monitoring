@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Monitoring</title>
-  <link href="https://fonts.googleapis.com/css?family=Orbitron:400|Nunito:400,700&display=swap" rel="stylesheet">
+  <!-- <link href="https://fonts.googleapis.com/css?family=Orbitron:400|Nunito:400,700&display=swap" rel="stylesheet"> -->
   <link rel="stylesheet" href="./css/styles.css">
   <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 </head>
@@ -14,11 +14,24 @@
     <a href="" class="logo">
       <span class="logo-text">m</span><span class="logo-o"></span><span class="logo-text">nit</span><span class="logo-o"></span><span class="logo-text">ring</span>
     </a>
+    <div class="burger-btn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
     <div class="auth-block">
+      <div class="close-auth-block">
+        <span></span>
+        <span></span>
+      </div>
       <button type="button" name="login-btn" class="btn btn-no-bg">Login</button>
       <button type="button" name="signup-btn" class="btn btn-primary">Sign Up</button>
     </div>
-    <div class="user-block">
+    <div class="user-block" style="display: none">
+      <div class="close-auth-block">
+        <span></span>
+        <span></span>
+      </div>
       <span class="username"></span>
       <button type="button" name="logout-btn" class="btn btn-primary">Log Out</button>
     </div>
@@ -73,87 +86,94 @@
     <div class="angle"></div>
   </div>
   <aside class="main-menu">
-    <ul>
-      <li>
-        <div class="main-menu-elem">
-          <div class="building">
-            <div class="building-image">
-              <img src="./images/cladire.png" alt="building">
-            </div>
-            <span class="building-name">PRECIS</span>
-          </div>
-          <button class="btn btn-primary" type="button" name="delete-building">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="has-only-btn">
-          <button class="btn btn-primary btn-add" type="button" name="add-building">Add building</button>
-        </div>
-      </li>
-      <li>
-        <div class="new-element">
-          <form action="./api/api.php" method="post">
-            <div class="input-block">
-              <input type="text" name="new-element-name" value="" placeholder="Building name" required>
-            </div>
-            <div class="input-block add-img">
-              <label for="file" class="btn btn-primary">Add a picture</label>
-              <input style="display:none" id="file" type="file" name="" value="">
-            </div>
-            <div class="input-block">
-              <button class="btn btn-primary" type="submit" name="add-building">Add</button>
-              <button class="btn btn-primary" type="button" name="cancel">Cancel</button>
-            </div>
-          </form>
-        </div>
-      </li>
-    </ul>
-    <ul>
-      <li>
-        <div class="has-only-btn">
-          <button class="btn btn-back" type="button" name="back">Back</button>
-        </div>
-      </li>
-      <li>
-        <div class="main-menu-elem">
-          Floor 1
-          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="main-menu-elem">
-          Floor 1
-          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="main-menu-elem">
-          Floor 1
-          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="main-menu-elem">
-          Floor 1
-          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="main-menu-elem">
-          Floor 1
-          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
-        </div>
-      </li>
-      <li>
-        <div class="has-only-btn">
-          <button class="btn btn-primary btn-add" type="button" name="add-floor">Add floor</button>
-        </div>
-      </li>
-    </ul>
+    <div class="empty-menu">
+      <span>
+        Log in to use this menu
+      </span>
+    </div>
   </aside>
 
   <main>
-    <h1>Test</h1>
+    <div class="container">
+      <h1>Welcome</h1>
+      <p class="welcome-message">Log in to use our service for monitoring buildings</p>
+    </div>
+    <!-- <div class="container">
+      <div class="floor-holder">
+        <div class="floor-image">
+          <div class="sensor sensor-active">
+            <div class="sensor-info">
+              <div class="sensor-status">
+                <span class="title">Status: </span>
+                <span class="value">Active</span>
+              </div>
+              <div class="sensor-name">
+                <span class="title">Name: </span>
+                <span class="value">Ololo</span>
+              </div>
+              <div class="sensor-serial-number">
+                <span class="title">Serial #: </span>
+                <span class="value">NS24TYHPOIK04JH</span>
+              </div>
+              <div class="sensor-type">
+                <span class="title">Type: </span>
+                <span class="value">Temperature</span>
+              </div>
+              <div class="sensor-value">
+                <span class="title">Value: </span>
+                <span class="value">32&#8451;</span>
+              </div>
+            </div>
+          </div>
+          <img src="./images/etaj2.png" alt="floor">
+        </div>
+        <div class="floor-controls">
+          <button class="btn btn-primary" type="button" name="add-sensor">Add sensor</button>
+          <div class="sensor-adder">
+            <div class="sensor-mover">
+              <div class="mover-line">
+                <div class="move-btn move-up"></div>
+              </div>
+              <div class="mover-line">
+                <div class="move-btn move-left"></div>
+                <div class="circle"></div>
+                <div class="move-btn move-right"></div>
+              </div>
+              <div class="mover-line">
+                <div class="move-btn move-down"></div>
+              </div>
+              <div class="sensor-mover-step">
+                Move step: <input type="number" name="step-percents" value="1" placeholder="%"> %
+              </div>
+            </div>
+            <div class="input-block">
+              <input type="text" name="new-sensor-name" value="" placeholder="Name">
+            </div>
+            <div class="input-block">
+              <input type="text" name="new-sensor-serial" value="" placeholder="Serial number">
+            </div>
+            <div class="input-block with-rb-group">
+              <div class="rb-group">
+                <input id="type-temperature" type="radio" name="new-sensor-type" value="" checked>
+                <label for="type-temperature">Temperature</label>
+              </div>
+              <div class="rb-group">
+                <input id="type-pressure" type="radio" name="new-sensor-type" value="">
+                <label for="type-pressure">Pressure</label>
+              </div>
+              <div class="rb-group">
+                <input id="type-humidity" type="radio" name="new-sensor-type" value="">
+                <label for="type-humidity">Humidity</label>
+              </div>
+            </div>
+            <div class="input-block">
+              <button class="btn btn-primary" type="submit" name="add-sensor-submit">Add</button>
+              <button class="btn btn-primary" type="button" name="cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> -->
   </main>
 
   <script type="text/javascript" src="./js/main.js"></script>
