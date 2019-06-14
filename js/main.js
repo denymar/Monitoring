@@ -379,7 +379,7 @@ function renderFloorsList(node, buildingName) {
 
         const floor = li.querySelector(".main-menu-elem");
         floor.onclick = () => {
-
+          loadFloor(mainContainer, buildingName, f['floor'], f['imageURL'])
         }
 
         ul.insertBefore(li, addFloorElem);
@@ -473,8 +473,7 @@ function renderFloorsList(node, buildingName) {
             const floor = addedFloor.querySelector(".main-menu-elem");
 
             floor.onclick = () => {
-
-              // loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
+              loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
             }
 
             const delFloor = addedFloor.querySelector(`button[name="delete-floor"]`);
@@ -505,7 +504,7 @@ function renderFloorsList(node, buildingName) {
   node.appendChild(ul);
 }
 
-function renderFloor(node, building, floor, floorIMG) {
+function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
   node.innerHTML = "";
   const floorHolder = document.createElement("div");
   floorHolder.classList.add("floor-holder");
@@ -521,9 +520,61 @@ function renderFloor(node, building, floor, floorIMG) {
   const floorImgContainer = floorHolder.querySelector(".floor-image");
   const floorControls = floorHolder.querySelector(".floor-controls");
   const addSensorBtn = floorHolder.querySelector(`button[name="add-sensor"]`);
+
+  if (sensorsArr) {
+    sensorsArr.forEach(s => {
+      const sensor = document.createElement("div");
+      sensor.classList.add("sensor");
+      if (s['status'] === "active") {
+        sensor.classList.add("sensor-active");
+      }
+
+      let unit = "";
+      if (s['type'] === 'temperature') {
+        unit = "&#8451;";
+      }
+      if (s['type'] === 'pressure') {
+        unit = "mm Hg";
+      }
+      if (s['type'] === 'humidity') {
+        unit = "%";
+      }
+
+      sensor.innerHTML = `
+      <div class="sensor-info">
+        <div class="sensor-status">
+          <span class="title">Status: </span>
+          <span class="value">${s['status']}</span>
+        </div>
+        <div class="sensor-name">
+          <span class="title">Name: </span>
+          <span class="value">${s['sensor']}</span>
+        </div>
+        <div class="sensor-serial-number">
+          <span class="title">Serial #: </span>
+          <span class="value">${s['SN']}</span>
+        </div>
+        <div class="sensor-type">
+          <span class="title">Type: </span>
+          <span class="value">${s['type']}</span>
+        </div>
+        <div class="sensor-value">
+          <span class="title">Value: </span>
+          <span class="value">${s['value']}${unit}</span>
+        </div>
+      </div>
+      `;
+
+      sensor.style.top = `${s['topPercents']}%`;
+      sensor.style.left = `${s['leftPercents']}%`;
+
+      floorImgContainer.appendChild(sensor);
+    });
+  }
+
   addSensorBtn.onclick = () => {
     const sensor = document.createElement("div");
-    sensor.classList.add("sensor", "sensor-active");
+    sensor.classList.add("sensor");
     let top = 0;
     let left = 0;
     sensor.style.top = `${top}%`;
@@ -589,18 +640,6 @@ function renderFloor(node, building, floor, floorIMG) {
     const humidityRb = sensorAdder.querySelector("#type-humidity");
     let type;
 
-    if (temperatureRb.checked) {
-      type = "temperature";
-    }
-
-    if (pressureRb.checked) {
-      type = "pressure";
-    }
-
-    if (humidityRb.checked) {
-      type = "humidity";
-    }
-
     moveUpBtn.onclick = () => {
       if (step.value === "") {
         top--;
@@ -641,6 +680,18 @@ function renderFloor(node, building, floor, floorIMG) {
     const cancelAdd = sensorAdder.querySelector(`button[name="cancel"]`);
 
     submitAdd.onclick = () => {
+      if (temperatureRb.checked) {
+        type = "temperature";
+      }
+
+      if (pressureRb.checked) {
+        type = "pressure";
+      }
+
+      if (humidityRb.checked) {
+        type = "humidity";
+      }
+
       if (sensorName.value !== "" && sensorSN.value !== "") {
         $.post(apiPATH, {
           "add-sensor": true,
@@ -653,6 +704,53 @@ function renderFloor(node, building, floor, floorIMG) {
           "left": left
         }, function(data, status) {
           console.log(data);
+          const parsed = JSON.parse(data);
+          if (parsed['status'] === 'success') {
+            let unit = "";
+            if (parsed['sensor']['type'] === 'temperature') {
+              unit = "&#8451;";
+            }
+            if (parsed['sensor']['type'] === 'pressure') {
+              unit = "mm Hg";
+            }
+            if (parsed['sensor']['type'] === 'humidity') {
+              unit = "%";
+            }
+
+            if (parsed['sensor']['status'] === 'active') {
+              sensor.classList.add("sensor-active");
+            }
+
+            const sensorInfo = document.createElement("div");
+            sensorInfo.classList.add("sensor-info");
+            sensorInfo.innerHTML = `
+            <div class="sensor-status">
+              <span class="title">Status: </span>
+              <span class="value">Active</span>
+            </div>
+            <div class="sensor-name">
+              <span class="title">Name: </span>
+              <span class="value">${parsed['sensor']['sensor']}</span>
+            </div>
+            <div class="sensor-serial-number">
+              <span class="title">Serial #: </span>
+              <span class="value">${parsed['sensor']['SN']}</span>
+            </div>
+            <div class="sensor-type">
+              <span class="title">Type: </span>
+              <span class="value">${parsed['sensor']['type']}</span>
+            </div>
+            <div class="sensor-value">
+              <span class="title">Value: </span>
+              <span class="value">${parsed['sensor']['value']}${unit}</span>
+            </div>
+            `;
+            sensor.appendChild(sensorInfo);
+            floorControls.removeChild(sensorAdder);
+            addSensorBtn.style.display = "inline";
+          } else {
+            console.log(parsed['message']);
+          }
         });
       }
     }
@@ -668,4 +766,20 @@ function renderFloor(node, building, floor, floorIMG) {
   }
 
   node.appendChild(floorHolder);
+}
+
+function loadFloor(node, building, floor, imageURL) {
+  $.post(apiPATH, {
+    "load-floor": true,
+    "building": building,
+    "floor": floor
+  }, function(data, status) {
+    console.log(data);
+    const parsed = JSON.parse(data);
+    if (parsed['status'] === 'success') {
+      renderFloor(node, building, floor, imageURL, parsed['sensors']);
+    } else {
+      console.log(parsed['message']);
+    }
+  });
 }

@@ -30,7 +30,7 @@ ORM::configure('password', '');
 //       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
 //       'UNIQUE KEY id (id))'
 // );
-
+//
 // ORM::get_db()->exec("DROP TABLE IF EXISTS floors;");
 // ORM::get_db()->exec(
 //   'CREATE TABLE floors (' .
@@ -40,6 +40,25 @@ ORM::configure('password', '');
 //       'floor VARCHAR(200),' .
 //       'imageURL VARCHAR(200),' .
 //       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
+//       'FOREIGN KEY (building_fk) REFERENCES buildings(building),' .
+//       'UNIQUE KEY id (id))'
+// );
+//
+// ORM::get_db()->exec("DROP TABLE IF EXISTS sensors;");
+// ORM::get_db()->exec(
+//   'CREATE TABLE sensors (' .
+//       'id INT PRIMARY KEY AUTO_INCREMENT,' .
+//       'username_fk VARCHAR(50) NOT NULL,' .
+//       'building_fk VARCHAR(200),' .
+//       'floor_fk VARCHAR(200),' .
+//       'sensor VARCHAR(200),' .
+//       'SN VARCHAR(200),' .
+//       'type VARCHAR(50),' .
+//       'topPercents INT,' .
+//       'leftPercents INT,' .
+//       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
+//       'FOREIGN KEY (building_fk) REFERENCES buildings(building),' .
+//       'FOREIGN KEY (floor_fk) REFERENCES floors(floor),' .
 //       'UNIQUE KEY id (id))'
 // );
 
@@ -127,7 +146,29 @@ function create_floor($username, $building, $floor, $imageURL) {
   $f->imageURL = $imageURL;
   $f->save();
 
-  $response['message'] = 'Building has been saved to DB.';
+  $response['message'] = 'Floor has been saved to DB.';
+
+  return $response;
+}
+
+function create_sensor($username, $building, $floor, $sensor, $sn, $type, $topP, $leftP) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $s = ORM::for_table('sensors')->create();
+  $s->username_fk = $username;
+  $s->building_fk = $building;
+  $s->floor_fk = $floor;
+  $s->sensor = $sensor;
+  $s->SN = $sn;
+  $s->type = $type;
+  $s->topPercents = $topP;
+  $s->leftPercents = $leftP;
+  $s->save();
+
+  $response['message'] = 'Sensor has been saved to DB.';
 
   return $response;
 }
@@ -183,6 +224,32 @@ function create_log($username, $year, $month, $day) {
   }
 
   return $response;
+}
+
+function sensor_exists($username, $building, $floor, $sensor, $sn) {
+  $s = ORM::for_table('sensors')
+  ->where(array(
+    'username_fk' => $username,
+    'building_fk' => $building,
+    'floor_fk' => $floor,
+    'sensor' => $sensor
+  ))
+  ->find_one();
+
+  $s2 = ORM::for_table('sensors')
+  ->where(array(
+    'username_fk' => $username,
+    'building_fk' => $building,
+    'floor_fk' => $floor,
+    'sensor' => $sensor
+  ))
+  ->find_one();
+
+  if ($s != null || $s2 != null) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 function floor_exists($username, $building, $floor) {
@@ -245,6 +312,124 @@ function login_user($username, $password) {
   }
 
   return $response;
+}
+
+function rand_float($st_num=0,$end_num=1,$mul=1000000) {
+  if ($st_num>$end_num) return false;
+  return mt_rand($st_num*$mul,$end_num*$mul)/$mul;
+}
+
+function rand_temperature() {
+  return rand_float(9, 32, 100);
+}
+
+function rand_pressure() {
+  return rand_float(700, 850, 1);
+}
+
+function rand_humidity() {
+  return rand_float(30, 99, 10);
+}
+
+if (isset($_POST['load-floor'])) {
+  if (isset($_SESSION['username'])) {
+    $response = array(
+      'status' => 'success',
+      'message' => ''
+    );
+
+    $user = $_SESSION['username'];
+    $building = $_POST['building'];
+    $floor = $_POST['floor'];
+
+    $sensors = ORM::for_table('sensors')
+    ->where(array(
+      "username_fk" => $user,
+      "building_fk" => $building,
+      "floor_fk" => $floor
+    ))
+    ->find_array();
+
+    if ($sensors != null) {
+      foreach ($sensors as &$s) {
+        if ($s['type'] == "temperature") {
+          $s['value'] = rand_temperature();
+        }
+        if ($s['type'] == "pressure") {
+          $s['value'] = rand_pressure();
+        }
+        if ($s['type'] == "humidity") {
+          $s['value'] = rand_humidity();
+        }
+        $s['status'] = 'active';
+      }
+      $response['sensors'] = $sensors;
+      $response['message'] = 'Sensors were found.';
+    } else {
+      $response['status'] = 'error';
+      $response['message'] = 'There was NOT found any sensor.';
+    }
+
+    echo json_encode($response);
+  }
+}
+
+if (isset($_POST['add-sensor'])) {
+  if (isset($_SESSION['username'])) {
+    $response = array(
+      'status' => 'success',
+      'message' => ''
+    );
+
+    $user = $_SESSION['username'];
+    $building = $_POST['building-name'];
+    $floor = $_POST['floor-name'];
+    $sensor_name = $_POST['sensor-name'];
+    $sn = $_POST['sensor-sn'];
+    $type = $_POST['type'];
+    $top = $_POST['top'];
+    $left = $_POST['left'];
+
+    if (sensor_exists($user, $building, $floor, $sensor_name, $sn)) {
+      $response['status'] = 'error';
+      $response['message'] = 'This sensor exists on this floor';
+    } else {
+      create_sensor($user, $building, $floor, $sensor_name, $sn, $type, $top, $left);
+
+      $response['message'] = 'Sensor was added.';
+
+      $s = ORM::for_table('sensors')
+      ->where(array(
+        'username_fk' => $user,
+        'building_fk' => $building,
+        'floor_fk' => $floor,
+        'sensor' => $sensor_name,
+        'SN' => $sn
+      ))
+      ->find_one()
+      ->as_array();
+
+      if ($s != null) {
+        $response['sensor'] = $s;
+        if ($s['type'] == "temperature") {
+          $response['sensor']['value'] = rand_temperature();
+        }
+        if ($s['type'] == "pressure") {
+          $response['sensor']['value'] = rand_pressure();
+        }
+        if ($s['type'] == "humidity") {
+          $response['sensor']['value'] = rand_humidity();
+        }
+        $response['sensor']['status'] = "active";
+        $response['message'] = "Floor was found.";
+      } else {
+        $response['status'] = "error";
+        $response['message'] = "Floor was NOT found.";
+      }
+
+      echo json_encode($response);
+    }
+  }
 }
 
 if (isset($_POST['add-floor'])) {
