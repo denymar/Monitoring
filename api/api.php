@@ -331,6 +331,32 @@ function rand_humidity() {
   return rand_float(30, 99, 10);
 }
 
+if (isset($_POST['update-sensors'])) {
+  if (isset($_SESSION['username'])) {
+    $response = array(
+      'status' => 'success',
+      'message' => ''
+    );
+
+    $sensors = $_POST['sensors'];
+    foreach ($sensors as &$s) {
+      if ($s['type'] == "temperature") {
+        $s['value'] = rand_temperature();
+      }
+      if ($s['type'] == "pressure") {
+        $s['value'] = rand_pressure();
+      }
+      if ($s['type'] == "humidity") {
+        $s['value'] = rand_humidity();
+      }
+      $s['status'] = 'active';
+    }
+    $response['sensors'] = $sensors;
+    $response['message'] = 'Update sensors.';
+    echo json_encode($response);
+  }
+}
+
 if (isset($_POST['load-floor'])) {
   if (isset($_SESSION['username'])) {
     $response = array(
@@ -427,8 +453,8 @@ if (isset($_POST['add-sensor'])) {
         $response['message'] = "Floor was NOT found.";
       }
 
-      echo json_encode($response);
     }
+    echo json_encode($response);
   }
 }
 

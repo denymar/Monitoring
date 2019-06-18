@@ -4,6 +4,9 @@ const mainContainer = document.querySelector("main .container");
 const mainMenu = document.querySelector(".main-menu");
 const mainMenuToggle = document.querySelector(".main-menu-toggle");
 
+let sensorUpdater;
+let sensorsInScope = [];
+
 
 mainMenuToggle.onclick = () => {
   mainMenu.classList.toggle("slide-left");
@@ -167,10 +170,6 @@ function initMenu(node) {
     </span>
   </div>
   `;
-}
-
-function fetchBuildings() {
-  return false;
 }
 
 function renderBuildingsList(node) {
@@ -367,19 +366,28 @@ function renderFloorsList(node, buildingName) {
         const li = document.createElement("li");
         li.innerHTML = `
         <div class="main-menu-elem">
-        <div class="floor">
-        <div class="floor-image">
-        <img src="./api/${f['imageURL']}" alt="building">
-        </div>
-        <span class="floor-name">${f['floor']}</span>
-        </div>
-        <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
+          <div class="floor">
+            <div class="floor-image">
+              <img src="./api/${f['imageURL']}" alt="building">
+            </div>
+            <span class="floor-name">${f['floor']}</span>
+          </div>
+          <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
         </div>
         `;
 
         const floor = li.querySelector(".main-menu-elem");
         floor.onclick = () => {
+          if (sensorUpdater) {
+            clearInterval(sensorUpdater);
+          }
+          sensorsInScope = [];
           loadFloor(mainContainer, buildingName, f['floor'], f['imageURL'])
+        }
+
+        const delFloor = li.querySelector(`button[name="delete-floor"]`);
+        delFloor.onclick = () => {
+          // TODO
         }
 
         ul.insertBefore(li, addFloorElem);
@@ -473,6 +481,10 @@ function renderFloorsList(node, buildingName) {
             const floor = addedFloor.querySelector(".main-menu-elem");
 
             floor.onclick = () => {
+              if (sensorUpdater) {
+                clearInterval(sensorUpdater);
+              }
+              sensorsInScope = [];
               loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
             }
 
@@ -567,6 +579,15 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
 
       sensor.style.top = `${s['topPercents']}%`;
       sensor.style.left = `${s['leftPercents']}%`;
+
+      const sensorObj = {
+        div: sensor,
+        name: s['sensor'],
+        sn: s['SN'],
+        type: s['type']
+      }
+
+      sensorsInScope.push(sensorObj);
 
       floorImgContainer.appendChild(sensor);
     });
@@ -746,6 +767,57 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
             </div>
             `;
             sensor.appendChild(sensorInfo);
+
+            sensorsInScope = [];
+            clearInterval(sensorUpdater);
+            if (sensorsInScope.length > 0) {
+              const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
+              sensorUpdater = setInterval(function() {
+                $.post(apiPATH, {
+                  "update-sensors": true,
+                  "sensors": toSend
+                }, function(data, status) {
+                  console.log(data);
+                  const parsed = JSON.parse(data);
+                  if (parsed['status'] = 'success') {
+                    parsed['sensors'].forEach(s => {
+                      const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
+                      let unit = "";
+                      if (s['type'] === 'temperature') {
+                        unit = "&#8451;";
+                      }
+                      if (s['type'] === 'pressure') {
+                        unit = "mm Hg";
+                      }
+                      if (s['type'] === 'humidity') {
+                        unit = "%";
+                      }
+
+                      if (s['status'] === 'active') {
+                        sensorFound.div.classList.add("sensor-active");
+                      } else {
+                        sensorFound.div.classList.remove("sensor-active");
+                      }
+
+                      sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+                      sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                    });
+                  } else {
+                    console.log(parsed['message']);
+                  }
+                });
+              }, 1000)
+            }
+
+            const sensorObj = {
+              div: sensor,
+              name: parsed['sensor']['sensor'],
+              sn: parsed['sensor']['SN'],
+              type: parsed['sensor']['type']
+            }
+
+            sensorsInScope.push(sensorObj);
+
             floorControls.removeChild(sensorAdder);
             addSensorBtn.style.display = "inline";
           } else {
@@ -763,6 +835,45 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
 
 
     floorControls.appendChild(sensorAdder);
+  }
+
+  if (sensorsInScope.length > 0) {
+    const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
+    sensorUpdater = setInterval(function() {
+      $.post(apiPATH, {
+        "update-sensors": true,
+        "sensors": toSend
+      }, function(data, status) {
+        console.log(data);
+        const parsed = JSON.parse(data);
+        if (parsed['status'] = 'success') {
+          parsed['sensors'].forEach(s => {
+            const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
+            let unit = "";
+            if (s['type'] === 'temperature') {
+              unit = "&#8451;";
+            }
+            if (s['type'] === 'pressure') {
+              unit = "mm Hg";
+            }
+            if (s['type'] === 'humidity') {
+              unit = "%";
+            }
+
+            if (s['status'] === 'active') {
+              sensorFound.div.classList.add("sensor-active");
+            } else {
+              sensorFound.div.classList.remove("sensor-active");
+            }
+
+            sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+            sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+          });
+        } else {
+          console.log(parsed['message']);
+        }
+      });
+    }, 1000)
   }
 
   node.appendChild(floorHolder);
