@@ -278,6 +278,7 @@ header {
 }
 
 .main-menu-toggle {
+  cursor: pointer;
   position: fixed;
   top: 100px;
   width: 20px;
@@ -302,7 +303,6 @@ header {
   border-right: 3px solid #222629;
   transform: rotate(45deg);
   transition: 0.7s;
-
 }
 
 .main-menu-toggle.slide-left .angle {
@@ -603,6 +603,19 @@ header {
   white-space: nowrap;
 }
 
+.floor-holder .value {
+  text-align: right;
+}
+
+.floor-holder .sensor-delete {
+  padding: 10px 5px 5px 5px;
+  text-align: center;
+}
+
+.floor-holder .sensor-delete .btn-primary {
+  padding: 5px 15px;
+}
+
 .floor-holder .floor-image img {
   min-width: 100%;
   max-width: 100%;
@@ -625,6 +638,16 @@ header {
   border: 1px solid rgba(134, 194, 50, 1);
   animation: blink-bs 1s infinite;
   -webkit-animation: blink-bs 1s infinite;
+}
+
+.sensors-list .sensor {
+  border-bottom: 1px solid #86c232;
+  padding: 5px 0;
+  margin: 30px 0;
+}
+
+.selected-floor {
+  background-color: #222629;
 }
 
 @keyframes blink-bs {

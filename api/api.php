@@ -62,37 +62,14 @@ ORM::configure('password', '');
 //       'UNIQUE KEY id (id))'
 // );
 
-// ORM::get_db()->exec("DROP TABLE IF EXISTS events;");
-// ORM::get_db()->exec(
-//   'CREATE TABLE events (' .
-//       'id INT PRIMARY KEY AUTO_INCREMENT,' .
-//       'username_fk VARCHAR(50) NOT NULL,' .
-//       'event VARCHAR(200),' .
-//       'place VARCHAR(200),' .
-//       'eYear INT,' .
-//       'eMonth INT,' .
-//       'eDate INT,' .
-//       'eHour INT,' .
-//       'eMinute INT,' .
-//       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
-//       'UNIQUE KEY id (id))'
-// );
-
-// create_event("admin", "Don't forget to go to school", "place1", 2019, "APR", 19, "17", "00");
-// create_event("adaadad", "Don't forget to go to school", "place2",2019, "APR", 19, "17", "00");
-// create_event("admin", "Don't forget to sent part2 for PW", "place3",2019, "APR", 21, "23", "59");
-
-// ORM::get_db()->exec("DROP TABLE IF EXISTS logs;");
-// ORM::get_db()->exec(
-//   'CREATE TABLE logs (' .
-//       'id INT PRIMARY KEY AUTO_INCREMENT,' .
-//       'username_fk VARCHAR(50) NOT NULL,' .
-//       'year INT,' .
-//       'month INT,' .
-//       'day INT,' .
-//       'FOREIGN KEY (username_fk) REFERENCES users(username),' .
-//       'UNIQUE KEY id (id))'
-// );
+function removeDirectory($path) {
+ 	$files = glob($path . '/*');
+	foreach ($files as $file) {
+		is_dir($file) ? removeDirectory($file) : unlink($file);
+	}
+	rmdir($path);
+ 	return;
+}
 
 function create_user($username, $password) {
   $response = array(
@@ -169,59 +146,6 @@ function create_sensor($username, $building, $floor, $sensor, $sn, $type, $topP,
   $s->save();
 
   $response['message'] = 'Sensor has been saved to DB.';
-
-  return $response;
-}
-
-function create_event($username, $event, $ePlace, $eYear, $eMonth, $eDate, $eHour, $eMinute) {
-  $response = array(
-    'status' => 'success',
-    'message' => ''
-  );
-
-  $e = ORM::for_table('events')->create();
-  $e->username_fk = $username;
-  $e->event = $event;
-  $e->place = $ePlace;
-  $e->eYear = $eYear;
-  $e->eMonth = $eMonth;
-  $e->eDate = $eDate;
-  $e->eHour = $eHour;
-  $e->eMinute = $eMinute;
-  $e->save();
-  $response['message'] = 'Event has been saved to DB.';
-
-  return $response;
-}
-
-function create_log($username, $year, $month, $day) {
-  $response = array(
-    'status' => 'success',
-    'message' => ''
-  );
-
-  $searchLog = ORM::for_table('logs')
-    ->where_any_is(array(
-      array(
-        'username_fk' => $username,
-        'year' => $year,
-        'month' => $month,
-        'day' => $day
-      )
-    ))
-    ->find_one();
-
-  if ($searchLog == null) {
-    $log = ORM::for_table('logs')->create();
-    $log->username_fk = $username;
-    $log->year = $year;
-    $log->month = $month;
-    $log->day = $day;
-    $log->save();
-    $response['message'] = 'Log has been added.';
-  } else {
-    $response['message'] = 'Log exists.';
-  }
 
   return $response;
 }
@@ -329,6 +253,139 @@ function rand_pressure() {
 
 function rand_humidity() {
   return rand_float(30, 99, 10);
+}
+
+function delete_sensor($username, $building, $floor, $sensor, $SN) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $s = ORM::for_table('sensors')
+  ->where(array(
+    'username_fk' => $username,
+    'building_fk' => $building,
+    'floor_fk' => $floor,
+    'sensor' => $sensor,
+    'SN' => $SN
+  ))
+  ->find_one();
+
+  if ($s != null) {
+    $s->delete();
+    $response['message'] = 'This sensor was deleted.';
+  } else {
+    $response['status'] = 'error';
+    $response['message'] = 'This sensor was NOT found.';
+  }
+
+  return $response;
+}
+
+function delete_floor($username, $building, $floor) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $f = ORM::for_table('floors')
+  ->where(array(
+    'username_fk' => $username,
+    'building_fk' => $building,
+    'floor' => $floor
+  ))
+  ->find_one();
+
+  if ($f != null) {
+    ORM::for_table('sensors')
+    ->where(array(
+      'username_fk' => $username,
+      'building_fk' => $building,
+      'floor_fk' => $floor
+    ))
+    ->delete_many();
+
+    $f->delete();
+    array_map('unlink', glob("uploads/{$username}/{$building}/{$floor}/*"));
+    rmdir("uploads/{$username}/{$building}/{$floor}");
+
+    $response['message'] = "The floor was removed.";
+  } else {
+    $response['status'] = "error";
+    $response['message'] = "The floor was NOT found.";
+  }
+
+  return $response;
+}
+
+function delete_building($username, $building) {
+  $response = array(
+    'status' => 'success',
+    'message' => ''
+  );
+
+  $b = ORM::for_table('buildings')
+  ->where(array(
+
+  ))
+  ->find_one();
+
+  if ($b != null) {
+    ORM::for_table('sensors')
+    ->where(array(
+      'username_fk' => $username,
+      'building_fk' => $building
+    ))
+    ->delete_many();
+
+    ORM::for_table('floors')
+    ->where(array(
+      'username_fk' => $username,
+      'building_fk' => $building
+    ))
+    ->delete_many();
+
+    removeDirectory("uploads/{$username}/{$building}/");
+    $b->delete();
+
+    $response['message'] = 'The building was removed.';
+  } else {
+    $response['status'] = "error";
+    $response['message'] = "The building was NOT found.";
+  }
+
+  return $response;
+}
+
+if (isset($_POST['delete-building'])) {
+  if (isset($_SESSION['username'])) {
+    $building = $_POST['building'];
+
+    $response = delete_building($_SESSION['username'], $building);
+    echo json_encode($response);
+  }
+}
+
+if (isset($_POST['delete-floor'])) {
+  if (isset($_SESSION['username'])) {
+    $building = $_POST['building'];
+    $floor = $_POST['floor'];
+
+    $response = delete_floor($_SESSION['username'], $building, $floor);
+    echo json_encode($response);
+  }
+}
+
+if (isset($_POST['delete-sensor'])) {
+  if (isset($_SESSION['username'])) {
+    $building = $_POST['building-name'];
+    $floor = $_POST['floor-name'];
+    $sensor = $_POST['sensor'];
+    $SN = $_POST['SN'];
+
+    $response = delete_sensor($_SESSION['username'], $building, $floor, $sensor, $SN);
+    echo json_encode($response);
+  }
 }
 
 if (isset($_POST['update-sensors'])) {
@@ -667,38 +724,6 @@ if (isset($_POST['logout-pressed'])) {
 
   session_unset();
   session_destroy();
-
-  echo json_encode($response);
-}
-
-if (isset($_POST['save-new-event'])) {
-  // sleep(2);
-  $response = array(
-    'status' => 'success',
-    'message' => ''
-  );
-
-
-  if (isset($_SESSION['username'])) {
-    create_event(
-      $_SESSION['username'],
-      $_POST['new-event-description'],
-      $_POST['new-event-place'],
-      $_POST['new-event-year'],
-      $_POST['new-event-month'],
-      $_POST['new-event-date'],
-      $_POST['new-event-hour'],
-      $_POST['new-event-minute']
-    );
-    $response['message'] = 'Event was added';
-    $response['event-hour'] = $_POST['new-event-hour'];
-    $response['event-minute'] = $_POST['new-event-minute'];
-    $response['event-description'] = $_POST['new-event-description'];
-    $response['event-place'] = $_POST['new-event-place'];
-  } else {
-    $response['status'] = 'error';
-    $response['message'] = 'You are not logged in';
-  }
 
   echo json_encode($response);
 }

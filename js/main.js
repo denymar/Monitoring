@@ -7,7 +7,6 @@ const mainMenuToggle = document.querySelector(".main-menu-toggle");
 let sensorUpdater;
 let sensorsInScope = [];
 
-
 mainMenuToggle.onclick = () => {
   mainMenu.classList.toggle("slide-left");
   mainMenuToggle.classList.toggle("slide-left");
@@ -26,6 +25,7 @@ function checkSession() {
       username.innerHTML = parsed['message'];
       clearMenu(mainMenu);
       renderBuildingsList(mainMenu);
+      initMessage_selectBuilding(mainContainer, parsed['message']);
     }
   });
 }
@@ -66,9 +66,11 @@ loginSubmit.onclick = (e) => {
       username.innerHTML = parsed['message'];
       mainMenu.classList.add("slide-left");
       mainMenuToggle.classList.add("slide-left");
-
+      loginUsername.value = "";
+      loginPass.value = "";
       clearMenu(mainMenu);
       renderBuildingsList(mainMenu);
+      initMessage_selectBuilding(mainContainer, parsed['message']);
     } else {
       loginError.innerHTML = parsed['message'];
     }
@@ -87,6 +89,8 @@ logoutBtn.onclick = () => {
       username.innerHTML = '';
       clearMenu(mainMenu);
       initMenu(mainMenu);
+      clearInterval(sensorUpdater);
+      initMessage_welcome(mainContainer);
     }
   });
 }
@@ -122,6 +126,8 @@ signupSubmit.onclick = (e) => {
       const parsed = JSON.parse(data);
       if (parsed['status'] === "success") {
         signupError.innerHTML = '';
+        signupUsername.value = "";
+        signupPass.value = "";
         signupModal.classList.remove("modal-show");
       } else {
         signupError.innerHTML = parsed['message'];
@@ -131,7 +137,6 @@ signupSubmit.onclick = (e) => {
     alert("Password repeat error");
   }
 }
-
 
 singupBtn.onclick = () => {
   signupModal.classList.add("modal-show");
@@ -172,6 +177,27 @@ function initMenu(node) {
   `;
 }
 
+function initMessage_welcome(node) {
+  node.innerHTML = `
+    <h1>Welcome</h1>
+    <p class="welcome-message">Log in to use our service for monitoring buildings</p>
+  `;
+}
+
+function initMessage_selectBuilding(node, user) {
+  node.innerHTML = `
+    <h1>Welcome, ${user}</h1>
+    <p class="welcome-message">Use side menu to add a new building or to choose an existent one for monitoring</p>
+  `;
+}
+
+function initMessage_selectFloor(node, building) {
+  node.innerHTML = `
+    <h1>The chosen building - ${building}</h1>
+    <p class="welcome-message">Use side menu to add a new floor or to choose an existent one for monitoring</p>
+  `;
+}
+
 function renderBuildingsList(node) {
   const ul = document.createElement("ul");
 
@@ -187,7 +213,7 @@ function renderBuildingsList(node) {
         <div class="main-menu-elem">
         <div class="building">
         <div class="building-image">
-        <img src="./api/${b['imageURL']}" alt="building">
+        <img src="./api/${b['imageURL']}?${Math.random()}" alt="building">
         </div>
         <span class="building-name">${b['building']}</span>
         </div>
@@ -197,9 +223,28 @@ function renderBuildingsList(node) {
 
         const building = li.querySelector(".main-menu-elem");
 
-        building.onclick = () => {
-          clearMenu(node);
-          renderFloorsList(node, b['building']);
+        building.onclick = (e) => {
+          if (e.target !== delBuilding) {
+            clearMenu(node);
+            renderFloorsList(node, b['building']);
+            initMessage_selectFloor(mainContainer, b['building']);
+          }
+        }
+
+        const delBuilding = li.querySelector(`button[name="delete-building"]`);
+        delBuilding.onclick = () => {
+          $.post(apiPATH, {
+            "delete-building": true,
+            "building": b['building']
+          }, function(data, status) {
+            console.log(data);
+            const parsedData = JSON.parse(data);
+            if (parsedData['status'] === 'success') {
+              ul.removeChild(li);
+            } else {
+              console.log(data);
+            }
+          });
         }
 
         ul.insertBefore(li, building_add);
@@ -287,7 +332,7 @@ function renderBuildingsList(node) {
             <div class="main-menu-elem">
               <div class="building">
                 <div class="building-image">
-                  <img src="./api/${parsed['building']['imageURL']}" alt="building">
+                  <img src="./api/${parsed['building']['imageURL']}?${Math.random()}" alt="building">
                 </div>
                 <span class="building-name">${parsed['building']['building']}</span>
               </div>
@@ -297,14 +342,26 @@ function renderBuildingsList(node) {
 
             const building = addedBuilding.querySelector(".main-menu-elem");
 
-            building.onclick = () => {
-              clearMenu(node);
-              renderFloorsList(node, parsed['building']['building']);
+            building.onclick = (e) => {
+              if (e.target !== delBuilding) {
+                clearMenu(node);
+                renderFloorsList(node, parsed['building']['building']);
+              }
             }
 
             const delBuilding = addedBuilding.querySelector(`button[name="delete-building"]`);
             delBuilding.onclick = () => {
-              // TODO
+              $.post(apiPATH, {
+                "delete-building": true,
+                "building": parsed['building']['building']
+              }, function(data, status) {
+                const parsedData = JSON.parse(data);
+                if (parsedData['status'] === 'success') {
+                  ul.removeChild(addedBuilding);
+                } else {
+                  console.log(data);
+                }
+              });
             }
 
             building_add.style.display = "block";
@@ -325,9 +382,7 @@ function renderBuildingsList(node) {
   }
 
   ul.appendChild(building_add);
-
   node.appendChild(ul);
-
 }
 
 function renderFloorsList(node, buildingName) {
@@ -344,8 +399,11 @@ function renderFloorsList(node, buildingName) {
 
   const backBtn = backElem.querySelector(`button[name="back"]`);
   backBtn.onclick = () => {
+    sensorsInScope = [];
+    clearInterval(sensorUpdater);
     clearMenu(node);
     renderBuildingsList(node);
+    initMessage_selectBuilding(mainContainer, document.querySelector(".user-block .username").innerHTML);
   }
 
   const addFloorElem = document.createElement("li");
@@ -368,7 +426,7 @@ function renderFloorsList(node, buildingName) {
         <div class="main-menu-elem">
           <div class="floor">
             <div class="floor-image">
-              <img src="./api/${f['imageURL']}" alt="building">
+              <img src="./api/${f['imageURL']}?${Math.random()}" alt="building">
             </div>
             <span class="floor-name">${f['floor']}</span>
           </div>
@@ -377,17 +435,42 @@ function renderFloorsList(node, buildingName) {
         `;
 
         const floor = li.querySelector(".main-menu-elem");
-        floor.onclick = () => {
-          if (sensorUpdater) {
-            clearInterval(sensorUpdater);
+        floor.onclick = (e) => {
+          if (e.target !== delFloor) {
+            if (sensorUpdater) {
+              clearInterval(sensorUpdater);
+            }
+            sensorsInScope = [];
+            loadFloor(mainContainer, buildingName, f['floor'], f['imageURL']);
+            floors = document.querySelectorAll(".main-menu .main-menu-elem");
+            floors.forEach(f => {
+              f.classList.remove("selected-floor");
+            });
+            floor.classList.add("selected-floor");
           }
-          sensorsInScope = [];
-          loadFloor(mainContainer, buildingName, f['floor'], f['imageURL'])
         }
 
         const delFloor = li.querySelector(`button[name="delete-floor"]`);
         delFloor.onclick = () => {
-          // TODO
+          $.post(apiPATH, {
+            "delete-floor": true,
+            "floor": f['floor'],
+            "building": buildingName
+          }, function(data, status) {
+            const parsedData = JSON.parse(data);
+            if (parsedData['status'] === 'success') {
+              console.log("TEST LIST: ",floor.classList);
+              if (floor.classList.contains("selected-floor")) {
+                console.log("TEST BLIA");
+                clearInterval(sensorUpdater);
+                initMessage_selectFloor(mainContainer, buildingName);
+              }
+
+              ul.removeChild(li);
+            } else {
+              console.log(data);
+            }
+          });
         }
 
         ul.insertBefore(li, addFloorElem);
@@ -464,37 +547,66 @@ function renderFloorsList(node, buildingName) {
           const parsed = JSON.parse(data);
           if (parsed['status'] === "success") {
             ul.removeChild(li_temp);
-
+            const floors = ul.querySelectorAll(".main-menu-elem");
+            floors.forEach(f => {
+              f.classList.remove("selected-floor");
+            });
             const addedFloor = document.createElement("li");
             addedFloor.innerHTML = `
-            <div class="main-menu-elem">
+            <div class="main-menu-elem selected-floor">
               <div class="floor">
                 <div class="floor-image">
-                  <img src="./api/${parsed['floor']['imageURL']}" alt="floor">
+                  <img src="./api/${parsed['floor']['imageURL']}?${Math.random()}" alt="floor">
                 </div>
-                <span class="building-name">${parsed['floor']['floor']}</span>
+                <span class="floor-name">${parsed['floor']['floor']}</span>
               </div>
               <button class="btn btn-primary" type="button" name="delete-floor">Delete</button>
             </div>
             `;
 
             const floor = addedFloor.querySelector(".main-menu-elem");
-
-            floor.onclick = () => {
-              if (sensorUpdater) {
-                clearInterval(sensorUpdater);
+            floor.onclick = (e) => {
+              if (e.target !== delFloor) {
+                if (sensorUpdater) {
+                  clearInterval(sensorUpdater);
+                }
+                const floors = document.querySelectorAll(".main-menu .main-menu-elem");
+                floors.forEach(f => {
+                  f.classList.remove("selected-floor");
+                });
+                floor.classList.add("selected-floor");
+                sensorsInScope = [];
+                loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
               }
-              sensorsInScope = [];
-              loadFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
             }
 
             const delFloor = addedFloor.querySelector(`button[name="delete-floor"]`);
             delFloor.onclick = () => {
-              // TODO
+              $.post(apiPATH, {
+                "delete-floor": true,
+                "floor": parsed['floor']['floor'],
+                "building": buildingName
+              }, function(data, status) {
+                const parsedData = JSON.parse(data);
+                if (parsedData['status'] === 'success') {
+                  console.log("TEST LIST: ",floor.classList);
+                  if (floor.classList.contains("selected-floor")) {
+                    console.log("TEST BLIA");
+                    clearInterval(sensorUpdater);
+                    initMessage_selectFloor(mainContainer, buildingName);
+                  }
+
+                  ul.removeChild(addedFloor);
+                } else {
+                  console.log(data);
+                }
+              });
             }
 
             addFloorBtn.style.display = "block";
             ul.insertBefore(addedFloor, addFloorElem);
+            sensorsInScope = [];
+            clearInterval(sensorUpdater);
             renderFloor(mainContainer, buildingName, parsed['floor']['floor'], parsed['floor']['imageURL']);
           } else {
             alert(parsed['message']);
@@ -522,23 +634,29 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
   floorHolder.classList.add("floor-holder");
   floorHolder.innerHTML = `
   <div class="floor-image">
-    <img src="./api/${floorIMG}" alt="floor">
+    <img src="./api/${floorIMG}?${Math.random()}" alt="floor">
   </div>
   <div class="floor-controls">
     <button class="btn btn-primary" type="button" name="add-sensor">Add sensor</button>
   </div>
+  <div class="sensors-list"></div>
   `;
 
   const floorImgContainer = floorHolder.querySelector(".floor-image");
   const floorControls = floorHolder.querySelector(".floor-controls");
+  const s_list = floorHolder.querySelector(".sensors-list");
   const addSensorBtn = floorHolder.querySelector(`button[name="add-sensor"]`);
 
   if (sensorsArr) {
     sensorsArr.forEach(s => {
       const sensor = document.createElement("div");
+      const sensor_li = document.createElement("div");
       sensor.classList.add("sensor");
+      sensor_li.classList.add("sensor");
+
       if (s['status'] === "active") {
         sensor.classList.add("sensor-active");
+        sensor_li.classList.add("sensor-active");
       }
 
       let unit = "";
@@ -552,7 +670,7 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
         unit = "%";
       }
 
-      sensor.innerHTML = `
+      sensor.innerHTML = sensor_li.innerHTML = `
       <div class="sensor-info">
         <div class="sensor-status">
           <span class="title">Status: </span>
@@ -574,14 +692,89 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
           <span class="title">Value: </span>
           <span class="value">${s['value']}${unit}</span>
         </div>
+        <div class="sensor-delete">
+          <button class="btn btn-primary" type="button" name="delete-sensor">Delete</button>
+        </div>
       </div>
       `;
+
+      const sensorDeleteBtn = sensor.querySelector(".sensor-delete button");
+      const sensor_liDeleteBtn = sensor_li.querySelector(".sensor-delete button");
+      console.log(sensorDeleteBtn);
+      sensorDeleteBtn.onclick = sensor_liDeleteBtn.onclick = () => {
+        $.post(apiPATH, {
+          "delete-sensor": true,
+          "building-name": building,
+          "floor-name": floor,
+          "sensor": s['sensor'],
+          "SN": s['SN']
+        }, function(data, status) {
+          const parsed = JSON.parse(data);
+          if (parsed['status'] === "success") {
+            for (let i = 0; i < sensorsInScope.length; i++) {
+              if (sensorsInScope[i]['name'] === s['sensor'] && sensorsInScope[i]['sn'] === s['SN']) {
+                sensorsInScope.splice(i, 1);
+                floorImgContainer.removeChild(sensor);
+                s_list.removeChild(sensor_li);
+
+                if (sensorUpdater) {
+                  clearInterval(sensorUpdater);
+                }
+
+                if (sensorsInScope.length > 0) {
+                  const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
+                  sensorUpdater = setInterval(function() {
+                    $.post(apiPATH, {
+                      "update-sensors": true,
+                      "sensors": toSend
+                    }, function(data, status) {
+                      console.log(data);
+                      const parsed = JSON.parse(data);
+                      if (parsed['status'] = 'success') {
+                        parsed['sensors'].forEach(s => {
+                          const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
+                          let unit = "";
+                          if (s['type'] === 'temperature') {
+                            unit = "&#8451;";
+                          }
+                          if (s['type'] === 'pressure') {
+                            unit = "mm Hg";
+                          }
+                          if (s['type'] === 'humidity') {
+                            unit = "%";
+                          }
+
+                          if (s['status'] === 'active') {
+                            sensorFound.div.classList.add("sensor-active");
+                          } else {
+                            sensorFound.div.classList.remove("sensor-active");
+                          }
+
+                          sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+                          sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                        });
+                      } else {
+                        console.log(parsed['message']);
+                      }
+                    });
+                  }, 1000)
+                }
+
+                break;
+              }
+            }
+          } else {
+            console.log(parsed['message']);
+          }
+        });
+      }
 
       sensor.style.top = `${s['topPercents']}%`;
       sensor.style.left = `${s['leftPercents']}%`;
 
       const sensorObj = {
         div: sensor,
+        li: sensor_li,
         name: s['sensor'],
         sn: s['SN'],
         type: s['type']
@@ -590,17 +783,21 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
       sensorsInScope.push(sensorObj);
 
       floorImgContainer.appendChild(sensor);
+      s_list.appendChild(sensor_li);
     });
   }
 
   addSensorBtn.onclick = () => {
     const sensor = document.createElement("div");
+    const sensor_li = document.createElement("div");
     sensor.classList.add("sensor");
+    sensor_li.classList.add("sensor");
     let top = 0;
     let left = 0;
     sensor.style.top = `${top}%`;
     sensor.style.left = `${left}%`;
     floorImgContainer.appendChild(sensor);
+    s_list.appendChild(sensor_li);
 
     addSensorBtn.style.display = "none";
 
@@ -740,11 +937,14 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
 
             if (parsed['sensor']['status'] === 'active') {
               sensor.classList.add("sensor-active");
+              sensor_li.classList.add("sensor-active");
             }
 
             const sensorInfo = document.createElement("div");
+            const sensorInfo_li = document.createElement("div");
             sensorInfo.classList.add("sensor-info");
-            sensorInfo.innerHTML = `
+            sensorInfo_li.classList.add("sensor-info");
+            sensorInfo.innerHTML = sensorInfo_li.innerHTML = `
             <div class="sensor-status">
               <span class="title">Status: </span>
               <span class="value">Active</span>
@@ -765,58 +965,137 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
               <span class="title">Value: </span>
               <span class="value">${parsed['sensor']['value']}${unit}</span>
             </div>
+            <div class="sensor-delete">
+              <button class="btn btn-primary" type="button" name="delete-sensor">Delete</button>
+            </div>
             `;
             sensor.appendChild(sensorInfo);
+            sensor_li.appendChild(sensorInfo_li);
 
-            sensorsInScope = [];
-            clearInterval(sensorUpdater);
-            if (sensorsInScope.length > 0) {
-              const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
-              sensorUpdater = setInterval(function() {
-                $.post(apiPATH, {
-                  "update-sensors": true,
-                  "sensors": toSend
-                }, function(data, status) {
-                  console.log(data);
-                  const parsed = JSON.parse(data);
-                  if (parsed['status'] = 'success') {
-                    parsed['sensors'].forEach(s => {
-                      const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
-                      let unit = "";
-                      if (s['type'] === 'temperature') {
-                        unit = "&#8451;";
-                      }
-                      if (s['type'] === 'pressure') {
-                        unit = "mm Hg";
-                      }
-                      if (s['type'] === 'humidity') {
-                        unit = "%";
+            const sensorDeleteBtn = sensor.querySelector(".sensor-delete button");
+            const sensor_liDeleteBtn = sensor_li.querySelector(".sensor-delete button");
+            sensorDeleteBtn.onclick = sensor_liDeleteBtn.onclick = () => {
+              $.post(apiPATH, {
+                "delete-sensor": true,
+                "building-name": building,
+                "floor-name": floor,
+                "sensor": parsed['sensor']['sensor'],
+                "SN": parsed['sensor']['SN']
+              }, function(data, status) {
+                const parsed2 = JSON.parse(data);
+                if (parsed2['status'] === "success") {
+                  for (let i = 0; i < sensorsInScope.length; i++) {
+                    if (sensorsInScope[i]['name'] === parsed['sensor']['sensor'] && sensorsInScope[i]['sn'] === parsed['sensor']['SN']) {
+                      sensorsInScope.splice(i, 1);
+                      floorImgContainer.removeChild(sensor);
+                      s_list.removeChild(sensor_li);
+                      if (sensorUpdater) {
+                        clearInterval(sensorUpdater);
                       }
 
-                      if (s['status'] === 'active') {
-                        sensorFound.div.classList.add("sensor-active");
-                      } else {
-                        sensorFound.div.classList.remove("sensor-active");
+                      if (sensorsInScope.length > 0) {
+                        const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
+                        sensorUpdater = setInterval(function() {
+                          $.post(apiPATH, {
+                            "update-sensors": true,
+                            "sensors": toSend
+                          }, function(data, status) {
+                            console.log(data);
+                            const parsed3 = JSON.parse(data);
+                            if (parsed3['status'] = 'success') {
+                              parsed3['sensors'].forEach(s => {
+                                const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
+                                let unit = "";
+                                if (s['type'] === 'temperature') {
+                                  unit = "&#8451;";
+                                }
+                                if (s['type'] === 'pressure') {
+                                  unit = "mm Hg";
+                                }
+                                if (s['type'] === 'humidity') {
+                                  unit = "%";
+                                }
+
+                                if (s['status'] === 'active') {
+                                  sensorFound.div.classList.add("sensor-active");
+                                } else {
+                                  sensorFound.div.classList.remove("sensor-active");
+                                }
+
+                                sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+                                sensorFound.li.querySelector(".sensor-status .value").innerHTML = s.status;
+                                sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                                sensorFound.li.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                              });
+                            } else {
+                              console.log(parsed3['message']);
+                            }
+                          });
+                        }, 1000)
                       }
 
-                      sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
-                      sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
-                    });
-                  } else {
-                    console.log(parsed['message']);
+                      break;
+                    }
                   }
-                });
-              }, 1000)
+                } else {
+                  console.log(parsed2['message']);
+                }
+              });
             }
 
             const sensorObj = {
               div: sensor,
+              li: sensor_li,
               name: parsed['sensor']['sensor'],
               sn: parsed['sensor']['SN'],
               type: parsed['sensor']['type']
             }
 
             sensorsInScope.push(sensorObj);
+
+            // BREAKPOINT
+            // sensorsInScope = [];
+            clearInterval(sensorUpdater);
+            // if (sensorsInScope.length > 0) {
+            const toSend = sensorsInScope.map(s => ({name: s.name, sn: s.sn, type: s.type}));
+            sensorUpdater = setInterval(function() {
+              $.post(apiPATH, {
+                "update-sensors": true,
+                "sensors": toSend
+              }, function(data, status) {
+                console.log(data);
+                const parsed2 = JSON.parse(data);
+                if (parsed2['status'] === 'success') {
+                  parsed2['sensors'].forEach(s => {
+                    const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
+                    let unit = "";
+                    if (s['type'] === 'temperature') {
+                      unit = "&#8451;";
+                    }
+                    if (s['type'] === 'pressure') {
+                      unit = "mm Hg";
+                    }
+                    if (s['type'] === 'humidity') {
+                      unit = "%";
+                    }
+
+                    if (s['status'] === 'active') {
+                      sensorFound.div.classList.add("sensor-active");
+                    } else {
+                      sensorFound.div.classList.remove("sensor-active");
+                    }
+
+                    sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+                    sensorFound.li.querySelector(".sensor-status .value").innerHTML = s.status;
+                    sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                    sensorFound.li.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+                  });
+                } else {
+                  console.log(parsed2['message']);
+                }
+              });
+            }, 1000)
+            // }
 
             floorControls.removeChild(sensorAdder);
             addSensorBtn.style.display = "inline";
@@ -829,10 +1108,10 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
 
     cancelAdd.onclick = () => {
       floorImgContainer.removeChild(sensor);
+      s_list.removeChild(sensor_li)
       floorControls.removeChild(sensorAdder);
       addSensorBtn.style.display = "inline";
     }
-
 
     floorControls.appendChild(sensorAdder);
   }
@@ -849,25 +1128,29 @@ function renderFloor(node, building, floor, floorIMG, sensorsArr=null) {
         if (parsed['status'] = 'success') {
           parsed['sensors'].forEach(s => {
             const sensorFound = sensorsInScope.find(elem => elem.name === s.name && elem.sn === s.sn);
-            let unit = "";
-            if (s['type'] === 'temperature') {
-              unit = "&#8451;";
-            }
-            if (s['type'] === 'pressure') {
-              unit = "mm Hg";
-            }
-            if (s['type'] === 'humidity') {
-              unit = "%";
-            }
+            if (sensorFound) {
+              let unit = "";
+              if (s['type'] === 'temperature') {
+                unit = "&#8451;";
+              }
+              if (s['type'] === 'pressure') {
+                unit = "mm Hg";
+              }
+              if (s['type'] === 'humidity') {
+                unit = "%";
+              }
 
-            if (s['status'] === 'active') {
-              sensorFound.div.classList.add("sensor-active");
-            } else {
-              sensorFound.div.classList.remove("sensor-active");
-            }
+              if (s['status'] === 'active') {
+                sensorFound.div.classList.add("sensor-active");
+              } else {
+                sensorFound.div.classList.remove("sensor-active");
+              }
 
-            sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
-            sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+              sensorFound.div.querySelector(".sensor-status .value").innerHTML = s.status;
+              sensorFound.li.querySelector(".sensor-status .value").innerHTML = s.status;
+              sensorFound.div.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+              sensorFound.li.querySelector(".sensor-value .value").innerHTML = `${s.value}${unit}`;
+            }
           });
         } else {
           console.log(parsed['message']);
@@ -890,6 +1173,7 @@ function loadFloor(node, building, floor, imageURL) {
     if (parsed['status'] === 'success') {
       renderFloor(node, building, floor, imageURL, parsed['sensors']);
     } else {
+      renderFloor(node, building, floor, imageURL);
       console.log(parsed['message']);
     }
   });
